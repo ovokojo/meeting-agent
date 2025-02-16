@@ -1,5 +1,4 @@
 numpy
 openai
 pyaudio
-pyttsx3
 python-dotenv 

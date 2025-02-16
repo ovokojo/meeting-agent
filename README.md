@@ -6,9 +6,9 @@ A simple voice-interactive agent that listens for a wake phrase ("hey bot"), tra
 
 - Wake word detection ("hey bot")
 - Real-time audio streaming and speech detection
-- Speech-to-text using OpenAI's Whisper API
-- Response generation using GPT-3.5-turbo
-- Text-to-speech response using pyttsx3
+- **Audio-to-text transcription using GPT-4o**
+- **Audio response generation using GPT-4o**
+- Multi-turn voice conversations
 - Configurable audio parameters and thresholds
 
 ## Prerequisites
@@ -32,23 +32,13 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-2. Create a `requirements.txt` file with the following dependencies:
-
-```
-openai
-python-dotenv
-pyaudio
-pyttsx3
-numpy
-```
-
-3. Install the required packages:
+2. Install the required packages:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Create a `.env` file in the project root directory:
+3. Create a `.env` file in the project root directory:
 
 ```
 OPENAI_API_KEY=your_api_key_here
@@ -82,17 +72,15 @@ python main.py
 ```
 
 3. When the bot is listening, say "hey bot" followed by your question
-4. Wait for the bot to process your speech and respond
+4. The bot will respond with both text and audio
+5. Continue the conversation naturally - context is maintained
 
 ## Configuration
 
-You can modify the following parameters in the script:
-
-- `CHUNK`: Buffer size for audio processing
-- `RATE`: Audio sampling rate (default: 16000 Hz)
-- `THRESHOLD`: Amplitude threshold for speech detection
-- `RECORD_SECONDS`: Recording window duration
+Updated configuration options:
 - `WAKE_PHRASE`: The trigger phrase (default: "hey bot")
+- `VOICE_CHARACTER`: Choose from "alloy", "echo", "fable", "onyx", "nova", or "shimmer"
+- `MAX_CONVERSATION_HISTORY`: Number of turns to keep in memory (default: 5)
 
 ## Troubleshooting
 
@@ -109,3 +97,13 @@ You can modify the following parameters in the script:
    - Verify your OpenAI API key is correctly set in the `.env` file
    - Check your internet connection
    - Ensure you have sufficient API credits
+
+4. **Audio playback issues:**
+   - Ensure speakers are properly configured
+   - Verify file permissions for writing WAV files
+   - Check if generated WAV files contain audio (try playing manually)
+
+5. **GPT-4o access issues:**
+   - Verify your OpenAI account has access to GPT-4o models
+   - Check your API quota limits
+   - Ensure you're using OpenAI Python package v1.12+
