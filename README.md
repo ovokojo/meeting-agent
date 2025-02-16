@@ -1,10 +1,10 @@
 # Voice Interactive Agent
 
-A simple voice-interactive agent that listens for a wake phrase ("hey bot"), transcribes speech using OpenAI's Whisper API, generates responses using GPT-3.5-turbo, and speaks back using text-to-speech.
+A simple voice-interactive agent that listens for a customizable wake phrase (default: "hey Cora"), transcribes speech using OpenAI's Whisper API, generates responses using GPT-4o, and speaks back using text-to-speech.
 
 ## Features
 
-- Wake word detection ("hey bot")
+- Customizable wake phrase (set at launch)
 - Real-time audio streaming and speech detection
 - **Audio-to-text transcription using GPT-4o**
 - **Audio response generation using GPT-4o**
@@ -71,14 +71,16 @@ The script will automatically list available input devices when started. You may
 python main.py
 ```
 
-3. When the bot is listening, say "hey bot" followed by your question
-4. The bot will respond with both text and audio
-5. Continue the conversation naturally - context is maintained
+3. Select your audio input device (or press Enter for default)
+4. Enter your preferred wake phrase (or press Enter to use the default "hey Cora")
+5. When the assistant is listening, say your wake phrase followed by your question
+6. The assistant will respond with both text and audio
+7. Continue the conversation naturally - context is maintained
 
 ## Configuration
 
 Updated configuration options:
-- `WAKE_PHRASE`: The trigger phrase (default: "hey bot")
+- `WAKE_PHRASE`: Customizable at launch (default: "hey Cora")
 - `VOICE_CHARACTER`: Choose from "alloy", "echo", "fable", "onyx", "nova", or "shimmer"
 - `MAX_CONVERSATION_HISTORY`: Number of turns to keep in memory (default: 5)
 

@@ -30,15 +30,21 @@ SILENCE_DURATION = 1.0
 TEMP_WAV_FILE = "temp_input.wav"
 RESPONSE_WAV_FILE = "response.wav"
 
-# Compile a regex that matches "hey bot" with optional punctuation/whitespace
-WAKE_PHRASE_REGEX = re.compile(r'\bhey\b[,\s]*bot\b', re.IGNORECASE)
-
 # Store conversation context
 conversation_history = []
 
-def extract_question(transcribed_text: str) -> str:
+def create_wake_phrase_regex(wake_phrase: str) -> re.Pattern:
+    """Creates a regex pattern for the given wake phrase with optional punctuation/whitespace"""
+    # Escape any special regex characters in the wake phrase
+    escaped_phrase = re.escape(wake_phrase)
+    # Split the escaped phrase into words and join with flexible whitespace/punctuation pattern
+    words = escaped_phrase.split(r'\ ')
+    pattern = r'\b' + r'\b[,\s]*\b'.join(words) + r'\b'
+    return re.compile(pattern, re.IGNORECASE)
+
+def extract_question(transcribed_text: str, wake_phrase_regex: re.Pattern) -> str:
     """Extracts the question part after the wake phrase if it exists."""
-    match = WAKE_PHRASE_REGEX.search(transcribed_text)
+    match = wake_phrase_regex.search(transcribed_text)
     if match:
         # Get everything after the matched wake phrase and strip extra punctuation/spaces
         question = transcribed_text[match.end():].strip(" ,.:;!?")
@@ -280,8 +286,13 @@ def main():
     device_index = input("\nEnter the device number to use (press Enter for default): ").strip()
     device_index = int(device_index) if device_index else default_input
     
+    # Let user set wake phrase
+    wake_phrase = input("\nEnter the wake phrase you want to use (press Enter for default 'hey Cora'): ").strip()
+    wake_phrase = wake_phrase if wake_phrase else "hey Cora"
+    wake_phrase_regex = create_wake_phrase_regex(wake_phrase)
+    
     print(f"\nUsing device {device_index}")
-    print("Bot is ready! Say 'hey bot' followed by your question.")
+    print(f"Assistant is ready! Say '{wake_phrase}' followed by your question.")
     print("(Recording will stop after 1 second of silence)")
     
     try:
@@ -294,11 +305,11 @@ def main():
                 print(f"Transcribed: {text}")
                 
                 if text:
-                    question = extract_question(text)
+                    question = extract_question(text, wake_phrase_regex)
                     if question:
                         print(f"Question detected: {question}")
                         response_text, audio_file = generate_response(question)
-                        print(f"Bot response: {response_text}")
+                        print(f"Assistant response: {response_text}")
                         
                         if audio_file:
                             print(f"Playing audio response from {audio_file}")
@@ -309,7 +320,7 @@ def main():
                                 print(f"Error cleaning up audio file: {e}")
                     
     except KeyboardInterrupt:
-        print("\nStopping the bot...")
+        print("\nStopping the assistant...")
     finally:
         p.terminate()
 
