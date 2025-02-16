@@ -53,9 +53,9 @@ The script will automatically list available input devices when started. You may
 ### PyAudio Installation Notes
 
 - On Windows: PyAudio should install directly through pip
-- On macOS: You may need to install PortAudio first:
+- On macOS: You may need to install PortAudio and FFmpeg first:
   ```bash
-  brew install portaudio
+  brew install portaudio ffmpeg
   ```
 - On Linux: Install PortAudio development package first:
   ```bash

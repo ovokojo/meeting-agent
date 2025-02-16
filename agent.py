@@ -4,11 +4,13 @@ import wave
 import io
 import base64
 import time
+import re
 
 import pyaudio
 from openai import OpenAI
 from dotenv import load_dotenv
 import numpy as np
+from pydub import AudioSegment
 
 ########################
 # Load Environment Vars
@@ -28,18 +30,26 @@ SILENCE_DURATION = 1.0
 TEMP_WAV_FILE = "temp_input.wav"
 RESPONSE_WAV_FILE = "response.wav"
 
-# The phrase that triggers the bot to respond
-WAKE_PHRASE = "hey bot"
+# Compile a regex that matches "hey bot" with optional punctuation/whitespace
+WAKE_PHRASE_REGEX = re.compile(r'\bhey\b[,\s]*bot\b', re.IGNORECASE)
 
 # Store conversation context
 conversation_history = []
+
+def extract_question(transcribed_text: str) -> str:
+    """Extracts the question part after the wake phrase if it exists."""
+    match = WAKE_PHRASE_REGEX.search(transcribed_text)
+    if match:
+        # Get everything after the matched wake phrase and strip extra punctuation/spaces
+        question = transcribed_text[match.end():].strip(" ,.:;!?")
+        return question
+    return ""
 
 def is_silence(audio_chunk):
     """Check if the audio chunk is silence"""
     try:
         data = np.frombuffer(audio_chunk, dtype=np.int16)
         amplitude = np.max(np.abs(data))
-        print(f"Current amplitude: {amplitude}")  # Debug logging
         return amplitude < SILENCE_THRESHOLD
     except Exception as e:
         print(f"Error checking silence: {e}")
@@ -121,49 +131,30 @@ def process_audio(audio_data):
         return ""
         
     try:
-        # No need to convert since we're already in int16 format
-        audio_int16 = np.frombuffer(audio_data, dtype=np.int16)
-        
-        # Create WAV file with proper headers
-        wav_buffer = io.BytesIO()
-        with wave.open(wav_buffer, 'wb') as wf:
+        # Save the audio data to a temporary WAV file
+        with wave.open(TEMP_WAV_FILE, 'wb') as wf:
             wf.setnchannels(CHANNELS)
             wf.setsampwidth(2)  # 2 bytes for int16
             wf.setframerate(RATE)
-            wf.writeframes(audio_int16.tobytes())
+            wf.writeframes(audio_data)
         
-        # Convert to base64
-        wav_buffer.seek(0)
-        base64_audio = base64.b64encode(wav_buffer.read()).decode('utf-8')
+        print("Sending audio to Whisper...")
         
-        print("Sending audio to GPT-4o...")
+        # Open and send the WAV file
+        with open(TEMP_WAV_FILE, 'rb') as audio_file:
+            response = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+                response_format="text"
+            )
         
-        # Build conversation messages with proper structure
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "Transcribe the audio input."},
-                    {
-                        "type": "input_audio",
-                        "input_audio": {
-                            "data": base64_audio,
-                            "format": "wav"
-                        }
-                    }
-                ]
-            }
-        ]
+        # Clean up temporary file
+        try:
+            os.remove(TEMP_WAV_FILE)
+        except Exception as e:
+            print(f"Error cleaning up temporary file: {e}")
         
-        response = client.chat.completions.create(
-            model="gpt-4o-audio-preview",
-            modalities=["text"],
-            messages=messages
-        )
-        
-        if response.choices and response.choices[0].message.content:
-            return response.choices[0].message.content
-        return ""
+        return response
         
     except Exception as e:
         print(f"Error processing audio: {e}")
@@ -172,53 +163,52 @@ def process_audio(audio_data):
 def generate_response(prompt_text: str) -> tuple:
     """Generate text and audio response using GPT-4o"""
     try:
-        # Build conversation messages with history
-        messages = [{"role": "system", "content": "You are a helpful meeting assistant."}]
-        
-        # Add conversation history with proper audio references
-        for msg in conversation_history:
-            if 'audio' in msg:
-                messages.append({
-                    "role": msg["role"],
-                    "content": None,  # Required for audio responses
-                    "audio": {"id": msg["audio"]["id"]}
-                })
-            else:
-                messages.append(msg)
-        
-        # Add current prompt
-        messages.append({"role": "user", "content": prompt_text})
-        
-        response = client.chat.completions.create(
-            model="gpt-4o-audio-preview",
-            modalities=["text", "audio"],
-            audio={"voice": "alloy", "format": "wav"},
-            messages=messages
+        # First get the text response
+        completion = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a helpful meeting assistant."},
+                {"role": "user", "content": prompt_text}
+            ]
         )
         
-        if not response.choices:
-            return "Sorry, I couldn't generate a response.", None
-            
-        choice = response.choices[0]
-        text_response = choice.message.content
+        text_response = completion.choices[0].message.content
         
-        # Save audio response if available
-        if choice.message.audio:
-            wav_bytes = base64.b64decode(choice.message.audio.data)
-            with open(RESPONSE_WAV_FILE, "wb") as f:
-                f.write(wav_bytes)
-                
-            # Update conversation history with both text and audio reference
-            conversation_history.append({"role": "user", "content": prompt_text})
-            conversation_history.append({
-                "role": "assistant",
-                "content": text_response,  # Store text for context
-                "audio": {"id": choice.message.audio.id}
-            })
+        # Generate speech and save to a temporary MP3 file
+        temp_mp3 = "temp_response.mp3"
+        response = client.audio.speech.create(
+            model="tts-1",
+            voice="alloy",
+            input=text_response
+        )
+        
+        # Save the MP3 response
+        with open(temp_mp3, "wb") as file:
+            response_bytes = b''
+            for chunk in response.iter_bytes():
+                response_bytes += chunk
+            file.write(response_bytes)
+            file.flush()
+            os.fsync(file.fileno())
+        
+        # Small delay to ensure file is written
+        time.sleep(0.1)
+        
+        # Convert MP3 to WAV using pydub
+        try:
+            audio = AudioSegment.from_mp3(temp_mp3)
+            audio.export(RESPONSE_WAV_FILE, format="wav")
+            
+            # Clean up temporary MP3 file
+            os.remove(temp_mp3)
             
             return text_response, RESPONSE_WAV_FILE
             
-        return text_response, None
+        except Exception as e:
+            print(f"Error converting audio format: {e}")
+            if os.path.exists(temp_mp3):
+                os.remove(temp_mp3)
+            return text_response, None
         
     except Exception as e:
         print(f"Error generating response: {e}")
@@ -227,27 +217,50 @@ def generate_response(prompt_text: str) -> tuple:
 def play_audio(wav_file_path: str):
     """Play a WAV file"""
     try:
-        wf = wave.open(wav_file_path, 'rb')
+        if not os.path.exists(wav_file_path):
+            print(f"Audio file not found: {wav_file_path}")
+            return
+            
+        # Ensure the file is completely written
+        time.sleep(0.1)
+        
+        try:
+            wf = wave.open(wav_file_path, 'rb')
+        except Exception as e:
+            print(f"Error opening WAV file: {e}")
+            return
+            
         p = pyaudio.PyAudio()
         
-        stream = p.open(
-            format=p.get_format_from_width(wf.getsampwidth()),
-            channels=wf.getnchannels(),
-            rate=wf.getframerate(),
-            output=True
-        )
-        
-        data = wf.readframes(CHUNK)
-        while data:
-            stream.write(data)
+        try:
+            # Open stream
+            stream = p.open(
+                format=p.get_format_from_width(wf.getsampwidth()),
+                channels=wf.getnchannels(),
+                rate=wf.getframerate(),
+                output=True
+            )
+            
+            # Read data in chunks
             data = wf.readframes(CHUNK)
             
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
+            print("Playing audio response...")
+            while len(data) > 0:
+                stream.write(data)
+                data = wf.readframes(CHUNK)
+                
+        finally:
+            # Cleanup
+            stream.stop_stream()
+            stream.close()
+            p.terminate()
+            wf.close()
         
     except Exception as e:
         print(f"Error playing audio: {e}")
+        # Print more detailed error information
+        import traceback
+        traceback.print_exc()
 
 def main():
     p = pyaudio.PyAudio()
@@ -281,18 +294,20 @@ def main():
                 print(f"Transcribed: {text}")
                 
                 if text:
-                    lower_text = text.lower()
-                    if WAKE_PHRASE in lower_text:
-                        # Extract the question
-                        question = lower_text.split(WAKE_PHRASE, 1)[1].strip()
-                        if question:
-                            print(f"Question detected: {question}")
-                            response_text, audio_file = generate_response(question)
-                            print(f"Bot response: {response_text}")
-                            
-                            if audio_file:
-                                play_audio(audio_file)
+                    question = extract_question(text)
+                    if question:
+                        print(f"Question detected: {question}")
+                        response_text, audio_file = generate_response(question)
+                        print(f"Bot response: {response_text}")
                         
+                        if audio_file:
+                            print(f"Playing audio response from {audio_file}")
+                            play_audio(audio_file)
+                            try:
+                                os.remove(audio_file)
+                            except Exception as e:
+                                print(f"Error cleaning up audio file: {e}")
+                    
     except KeyboardInterrupt:
         print("\nStopping the bot...")
     finally:
