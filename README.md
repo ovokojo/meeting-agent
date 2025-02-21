@@ -13,7 +13,7 @@ A simple voice-interactive agent that listens for a customizable wake phrase, tr
 
 ## Prerequisites
 
-- Python 3.8 or higher
+- Python 3.11
 - An OpenAI API key
 - A working microphone
 - Speakers or headphones for audio output
@@ -40,25 +40,35 @@ This script will:
 
 ## Step-by-Step Installation
 
-1. Create and activate a virtual environment:
+1. Install system dependencies:
+
+```bash
+# On macOS
+brew install portaudio ffmpeg
+
+# On Ubuntu/Linux
+sudo apt-get install python3-pyaudio portaudio19-dev ffmpeg
+```
+
+2. Create and activate a virtual environment:
 
 ```bash
 # On Windows
-python -m venv venv
+python3.11 -m venv venv
 .\venv\Scripts\activate
 
 # On macOS/Linux
-python3 -m venv venv
+python3.11 -m venv venv
 source venv/bin/activate
 ```
 
-2. Install the required packages:
+3. Install the required packages:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Create a `.env` file in the project root directory:
+4. Create a `.env` file in the project root directory:
 
 ```
 OPENAI_API_KEY=your_api_key_here

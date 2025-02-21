@@ -1,5 +1,6 @@
 numpy
 openai
+pydub
 pyaudio
 python-dotenv
-pydub 
+ffmpeg-python
