@@ -1,6 +1,6 @@
 # Voice Interactive Agent
 
-A simple voice-interactive agent that listens for a customizable wake phrase (default: "hey Cora"), transcribes speech using OpenAI's Whisper API, generates responses using GPT-4o, and speaks back using text-to-speech.
+A simple voice-interactive agent that listens for a customizable wake phrase, transcribes speech using OpenAI's Whisper API, generates responses using GPT-4o, and speaks back using text-to-speech.
 
 ## Features
 
@@ -18,7 +18,27 @@ A simple voice-interactive agent that listens for a customizable wake phrase (de
 - A working microphone
 - Speakers or headphones for audio output
 
-## Installation
+## Express Setup (macOS/Linux)
+
+For a quicker setup on macOS or Linux systems, you can use the provided shell script:
+
+1. Make the script executable:
+```bash
+chmod +x run.sh
+```
+
+2. Run the script:
+```bash
+./run.sh
+```
+
+This script will:
+- Create a virtual environment if it doesn't exist
+- Activate the virtual environment
+- Install all required packages
+- Start the application
+
+## Step-by-Step Installation
 
 1. Create and activate a virtual environment:
 
@@ -42,9 +62,14 @@ pip install -r requirements.txt
 
 ```
 OPENAI_API_KEY=your_api_key_here
+SYSTEM_CONTEXT=your_custom_system_prompt_here
+WAKE_PHRASE=your_custom_wake_phrase_here
 ```
 
-Replace `your_api_key_here` with your actual OpenAI API key.
+Replace:
+- `your_api_key_here` with your actual OpenAI API key
+- `your_custom_system_prompt_here` with your desired system context (defaults to "You are a helpful assistant" if not set)
+- `your_custom_wake_phrase_here` with your desired wake phrase (defaults to "meeting agent" if not set)
 
 ## Audio Setup
 
@@ -68,11 +93,11 @@ The script will automatically list available input devices when started. You may
 2. Run the script:
 
 ```bash
-python main.py
+python agent.py
 ```
 
 3. Select your audio input device (or press Enter for default)
-4. Enter your preferred wake phrase (or press Enter to use the default "hey Cora")
+4. Enter your preferred wake phrase (or press Enter to use the default "meeting agent")
 5. When the assistant is listening, say your wake phrase followed by your question
 6. The assistant will respond with both text and audio
 7. Continue the conversation naturally - context is maintained
@@ -80,9 +105,8 @@ python main.py
 ## Configuration
 
 Updated configuration options:
-- `WAKE_PHRASE`: Customizable at launch (default: "hey Cora")
-- `VOICE_CHARACTER`: Choose from "alloy", "echo", "fable", "onyx", "nova", or "shimmer"
-- `MAX_CONVERSATION_HISTORY`: Number of turns to keep in memory (default: 5)
+- `WAKE_PHRASE`: Customizable at launch (default: "meeting agent")
+- `SYSTEM_CONTEXT`: The AI's persona and behavior (default: "You are a helpful assistant")
 
 ## Troubleshooting
 
@@ -109,3 +133,27 @@ Updated configuration options:
    - Verify your OpenAI account has access to GPT-4o models
    - Check your API quota limits
    - Ensure you're using OpenAI Python package v1.12+
+
+## License
+
+MIT License
+
+Copyright (c) 2024
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
