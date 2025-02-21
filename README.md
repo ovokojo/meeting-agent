@@ -1,4 +1,4 @@
-# Voice Interactive Agent
+# Meeting Agent
 
 A simple voice-interactive agent that listens for a customizable wake phrase, transcribes speech using OpenAI's Whisper API, generates responses using GPT-4o, and speaks back using text-to-speech.
 
